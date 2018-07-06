@@ -1,0 +1,56 @@
+---
+- name: Ensure Private Network Interface Exists
+  azure_rm_networkinterface:
+    tenant: "{{ azure_tenant_id }}"
+    subscription_id: "{{ azure_subscription_id }}"
+    client_id: "{{ azure_client_id }}"
+    secret: "{{ azure_client_secret }}"
+    tags: "{{ az_tags_dict }}"
+    resource_group: "{{ app_location_id }}-{{ app_subscription_id }}-{{ app_environment_id }}-Rsg-{{ app_description }}-{{ app_increment }}"
+    location: "{{ app_rsg_location }}"
+    state: "present"
+    name: "{{ nic_item.name }}{{ '%02d'|format(index +1|int) }}"
+    virtual_network_name: "{{ app_location_id }}-{{ app_subscription_id }}-{{ app_environment_id }}-Vnet-{{ net_increment }}"
+    subnet_name: "{{ app_location_id }}-{{ app_subscription_id }}-{{ app_environment_id }}-Snt-{{ app_description }}-{{ app_increment }}"
+    tags: "{{ az_tags_dict }}"
+    ip_configurations:
+      - name: ipconfig1
+        primary: True
+    security_group_name: "{{ app_location_id }}-{{ app_subscription_id }}-{{ app_environment_id }}-Nsg-{{ app_description }}-{{ app_increment }}"
+  loop: "{{ vms|flatten(levels=1) }}"
+  loop_control:
+    loop_var: nic_item
+    index_var: index
+    label: "{{ item.name }}"
+  register: CreatedNIC
+
+- name: Ensure Virtual Machines Exists
+  azure_rm_virtualmachine:
+    tenant: "{{ azure_tenant_id }}"
+    subscription_id: "{{ azure_subscription_id }}"
+    client_id: "{{ azure_client_id }}"
+    secret: "{{ azure_client_secret }}"
+    tags: "{{ az_tags_dict }}"
+    resource_group: "{{ app_location_id }}-{{ app_subscription_id }}-{{ app_environment_id }}-Rsg-{{ app_description }}-{{ app_increment }}"
+    location: "{{ app_rsg_location }}"
+    state: "present"
+    name: "{{ vm_item.name }}{{ '%02d'|format(index +1|int) }}"
+    vm_size: "{{ vm_item.az_vm_size }}"
+    managed_disk_type: Standard_LRS
+    network_interface_names:
+    admin_username: "{{ vm_item.vm_admin_username }}"
+    ssh_password_enabled: false
+    ssh_public_keys: 
+      - path: "/home/{{ vm_item.vm_admin_username }}/.ssh/authorized_keys"
+        key_data: "{{ vm_item.vm_admin_public_key }}"
+    image:
+      offer: "{{ vm_item.image_offer }}"
+      publisher: "{{ vm_item.image_publisher }}"
+      sku: "{{ vm_item.image_sku }}"
+      version: "{{ vm_item.image_version }}"
+  loop: "{{ vms|flatten(levels=1) }}"
+  loop_control:
+    loop_var: vm_item
+    index_var: index
+    label: "{{ vm_item.name }}"
+...
