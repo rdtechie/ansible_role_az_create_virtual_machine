@@ -21,7 +21,7 @@
   loop_control:
     loop_var: nic_item
     index_var: index
-    label: "{{ item.name }}"
+    label: "{{ nic_item.name }}"
   register: CreatedNIC
 
 - name: Ensure Virtual Machines Exists
